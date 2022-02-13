@@ -1,7 +1,319 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Fanjia Yan, CS184-AAT</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>The project can be broken down into two subparts:</p>
+<ul>
+  <li>Section I: Rasterization</li>
+  <li>Section II: Sampling</li>
+</ul>
+<p>In the first part of the project, I build a rasterization tool for triangles. After a picture is triangulated, we can use the rasterization
+  tool to fill in color, implement transformations. In the second part of the project, I implemented various sampling methods to improve image quality
+  and avoid aliasing. Sampling Method includes: Pixel Sampling and Level Sampling using Mipmap. 
+</p>
+
+
+<h2 align="middle">Section I: Rasterization</h2>
+
+<h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+
+<p>For this problem, we are given the input of three pairs of coordinates.
+  <ul>
+    <li>First, I convert all three points
+      into Vector3D variables and determine the orientation of the three points by finding the direction of cross product.
+      If the three vectors are counter-clockwise, we swap two of the elements to make it clockwise to make computation easier.</li>
+    <li>Then I convert the three point into line vectors and find the normal vector for each line respectively. </li>
+    <li>After that, I create 
+      a bounding box which the four vertext consists of maximum and minimum of the coordinates of the three vertices.</li>
+    <li>Eventually, I traverse through all points in the bounding box to see if any point satisfies the three line test. If satisfied,
+      we will called the rasterize_point() function to rasterize the pixel. </li>
+  </ul> 
+</p>
+<p>My algorithm is checking exactly the points in the bounding box of the given triangles as I calculate the maximum and minimum
+  of x,y coordinates of all three vertices and form a bounding box.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/Q1-3.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 2: </figcaption>
+        <figcaption align="middle">Zooming in on the Jaggies of purple triangle.</figcaption>
+      </td>
+      <td>
+        <img src="images/Q1-2.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 3: </figcaption>
+        <figcaption align="middle">Zooming in on the Jaggies of red triangle.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <img src="images/Q1-1.png" align="top" width="400px" border = "1px solid green"/>
+      <figcaption align="middle">Figure 1: Rasterization for test4.</figcaption>
+      <figcaption align="middle">Rasterization for test4.</figcaption>
+    </tr>
+  </table>
+</div>
+
+
+<h3 align="middle">Part 2: Antialiasing triangles</h3>
+<p>For this problem, we are to improve the quality of triangles by Antialiasing.
+  <ul>
+    <li>First, I increase the sample buffer size by a factor of sample rate so that when we are supersampling we 
+      are able to fit all the color data into the array.</li>
+    <li>Then within the for loop of regular sampling, I divided the point into #(sample_rate) of subpoints and conduct three
+      line tests for each subpoint. </li>
+    <li>If the subpoint does not pass three line tests, the color will default to white. Otherwise I create a method super_sampling_fill_pixel() to fill in the color linearly.
+      For a single point, the sample buffer store the subpoint information as [subpoint1_color,subpoint2_color,subpoint3_color,subpoint4_color] for a sample rate of 4
+    </li>
+    <li>After traversing all the points in svg, we need to downsampling the sample buffer to frame buffer. I do 
+      so by traversing the sample buffer with a step size of 4. Then,I add up RBG value of subpoints and divide by
+    the sample rate. After that,I put the value back to the frame buffer,which will be rendered on screen. </li>
+    <li>I make adjustment to normal fill_pixel(), which is used for rasterize_line() by adding the same color (sample_rate) times
+      on the sample buffer to avoid error when increasing sample rate
+    </li>
+
+  </ul> 
+</p>
+<p>Data Structure (An example of sample rate = 4):
+</p>
+<p>sample_buffer = [(0,0)_subpoint_1,(0,0)_subpoint_2,(0,0)_subpoint_3,(0,0)_subpoint_4,(1,0)_subpoint_1,(1,0)_subpoint_2,(1,0)_subpoint_3,(1,0)_subpoint_4, ....] </p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+        <img src="images/Q2-1.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 4: </figcaption>
+        <figcaption align="middle">Sample rate = 1</figcaption>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/Q2-2.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 5: </figcaption>
+        <figcaption align="middle">Sample rate = 4</figcaption>
+      </td>
+      <td>
+        <img src="images/Q2-3.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 6: </figcaption>
+        <figcaption align="middle">Sample rate = 16</figcaption>
+      </td>
+    </tr>
+    <br>
+    <br>
+  </table>
+</div>
+<div align="middle">
+  <table style="width=100%">
+    <br>
+    
+    <tr>
+        <img src="images/Q2-4.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 7: </figcaption>
+        <figcaption align="middle">Sample rate = 1</figcaption>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/Q2-5.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 8: </figcaption>
+        <figcaption align="middle">Sample rate = 4</figcaption>
+      </td>
+      <td>
+        <img src="images/Q2-6.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 9: </figcaption>
+        <figcaption align="middle">Sample rate = 16</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+
+<h3 align="middle">Part 3: Transforms</h3>
+<p>My robot is climbing on a mounting and reaching a spot where he can grab. </p>
+<div align="middle">
+  <table style="width=100%">
+    <br>
+    
+    <tr>
+        <img src="images/Q3-1.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 10: </figcaption>
+        <figcaption align="middle">Robot Climbing</figcaption>
+    </tr>
+    <br>
+  </table>
+</div>
+
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 4: Barycentric coordinates</h3>
+<p>My understanding of Barycentric coordinate is that the coordinate system is a representation of porportionality
+  bounding by the three vertices. &alpha;, &beta;, &gamma; are measures of porportion of each vertex playing in effect
+  of the specific point. In Cartesian coordinate, a point in a triangle can be characterized as (x,y) for 2D plane,
+  In Barycentric view, a point inside the triangle can be characterized by V = &alpha; * Va + &beta; * Vb + &gamma; * Vc
+  where &alpha; + &beta; + &gamma; = 1 and Va, Vb, Vc are the three vertex.
+</p>
+<p>One of the application of Barycentric coordinate is color mapping. In Figure 11, I set the three vertices of the trinalge
+  to be Red,Green,Blue which corresponds to Va=(1,0,0),Vb=(0,1,0),Vc=(0,0,1). For any point inside the triangle, the point can be 
+characterized by V = &alpha; * Va + &beta; * Vb + &gamma; * Vc. V will therefore be a unique combination of color based on the Barycentric
+coefficient. For example if &alpha; = &beta; = &gamma; = 1, the point will show color of rgb(85.3,85.3,85.3) approximately </p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/Q4-1.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 11: </figcaption>
+        <figcaption align="middle">Triangle with Barycentric Coordinate Linear Interpolation </figcaption>
+        <figcaption align="middle">(RBG on each vertex) </figcaption>
+      </td>
+      <td>
+        <img src="images/Q4-2.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 12: </figcaption>
+        <figcaption align="middle">A circle formed by triangles with </figcaption>
+        <figcaption align="middle">varieties of colors </figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+<p>Pixel sampling is a sampling technique that look for the relative position in the 
+  texture map and sample it back to the frame buffer.</p>
+  <ul>
+    <li>First, for each pixel, I find the Barycentric coefficient.
+    <li>Then I use the Barycentric coefficient to calculate the relative position of the pixel on 
+      uv(texture) map. </li>
+      <li>Then, I apply the pixel sampling method given to calculate the color in the frame buffer
+        <br>
+        &nbsp &nbsp Nearest: this sampling method finds the neartest pixel on the texture map given a pair of u-v coordinate
+        and directly return that value
+        <br>
+        &nbsp &nbsp Bilinear: this sampling method takes the neighbouring four pixels, which forms a bounding box. Then we find
+        the weighted average of all four by using lerp and pass back the value.
+      </li>
+      <li>Finall, pass the data back and fill in the sample buffer</li>
+  </ul> 
+
+  <div align="middle">
+    <table style="width=100%">
+      <br>
+      <tr>
+        <td>
+          <img src="images/Q5-1.png" align="top" width="400px" border = "1px solid green"/>
+          <figcaption align="middle">Figure 13: </figcaption>
+          <figcaption align="middle">Nearest Sampling at rate of 1</figcaption>
+        </td>
+        <td>
+          <img src="images/Q5-2.png" align="top" width="400px" border = "1px solid green"/>
+          <figcaption align="middle">Figure 14: </figcaption>
+          <figcaption align="middle">Nearest Sampling at rate of 16</figcaption>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/Q5-3.png" align="top" width="400px" border = "1px solid green"/>
+          <figcaption align="middle">Figure 15: </figcaption>
+          <figcaption align="middle">Bilinear Sampling at rate of 1</figcaption>
+        </td>
+        <td>
+          <img src="images/Q5-4.png" align="top" width="400px" border = "1px solid green"/>
+          <figcaption align="middle">Figure 16: </figcaption>
+          <figcaption align="middle">Bilinear Sampling at rate of 16</figcaption>
+        </td>
+      </tr>
+      <br>
+    </table>
+  </div>
+  <p>Comparing Figure 13 and Figure 15, with the same sampling rate at 1, neartest sampling technique will create
+    more color jump within some continous color texture. When we increase the sample rate 
+  which are shown in Figure 14 and Figure 16, supersampling mitigate the discontinuity in color but there are still jaggies </p>
+  <p>The difference between the two sampling method will increase when the texture coordinate and screen coordinate vary drastically.
+    For exmaple, The image I am currently rendering has a twisting coordinate. Therefore, nearing sampling method might sample a texture pixel
+    that are extremely far from the pixel in screen space. However, the bilinear method will use 4 pixel points to lerp the final texture pixel 
+    which will turn out to be more accurate.
+  </p>
+  <br>
+<h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+<p>Level sampling is a way of sampling texture from mipmap which offers different levels of precision. When we compare
+  the pixel size between world space and texture map, if there is a magnification, we will sample from the relatively high resolution mipmap level.
+  When there is a minification which would potentially result in Moire Pattern, we will sample the low resolution mipmap level.
+</p>
+<p>
+  When we apply pixel sampling and level sampling, the speed will decrease, and more specifically, with no pixel/level sampling being the fastest, nearest sampling will be faster than bilinear sampling.
+  Similarly, the memory usage will increase, with bilinear sampling takes up more memory. In terms of Antialiasing, bilinear sampling performs better than nearest sampling.
+
+  When we increase the sample rate, the speed will decrease because we sample more and will take more memory to store it. The Antialiasing power will increase because it samples the pixel more often.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <br>
+    <tr>
+      <td>
+        <img src="images/Q6-1.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 17: </figcaption>
+        <figcaption align="middle">L_ZERO + P_NEAREST</figcaption>
+      </td>
+      <td>
+        <img src="images/Q6-2.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 18: </figcaption>
+        <figcaption align="middle">L_ZERO + + P_LINEAR</figcaption>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/Q6-3.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 19: </figcaption>
+        <figcaption align="middle">L_NEAREST + P_NEAREST</figcaption>
+      </td>
+      <td>
+        <img src="images/Q6-4.png" align="top" width="400px" border = "1px solid green"/>
+        <figcaption align="middle">Figure 20: </figcaption>
+        <figcaption align="middle">L_LINEAR + P_LINEAR</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+
+<h2 align="middle">Section III: Art Competition</h2>
+<p>If you are not participating in the optional art competition, don't worry about this section!</p>
+
+<h3 align="middle">Part 7: Draw something interesting!</h3>
+
+</body>
 </html>
