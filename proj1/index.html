@@ -109,7 +109,7 @@
 </p>
 <p>Data Structure (An example of sample rate = 4):
 </p>
-<p>sample_buffer = [(0,0)_subpoint_1,(0,0)_subpoint_2,(0,0)_subpoint_3,(0,0)_subpoint_4,(1,0)_subpoint_1,(1,0)_subpoint_2,(1,0)_subpoint_3,(1,0)_subpoint_4, ....] </p>
+<p>sample_buffer = [(0,0)_subpoint_1,(0,0)_subpoint_2,(0,0)_subpoint_3,(0,0)_subpoint_4,(0,0)_subpoint_1,(1,0)_subpoint_2,(1,0)_subpoint_3,(1,0)_subpoint_4, ....] </p>
 
 <div align="middle">
   <table style="width=100%">
@@ -161,7 +161,8 @@
 
 
 <h3 align="middle">Part 3: Transforms</h3>
-<p>My robot is climbing on a mounting and reaching a spot where he can grab. </p>
+<p>My robot is climbing on a mounting and reaching a spot where he can grab. I basically rotate and adjust the arms of the robots and make
+  it look like it is stretching out to reach </p>
 <div align="middle">
   <table style="width=100%">
     <br>
@@ -272,6 +273,12 @@ coefficient. For example if &alpha; = &beta; = &gamma; = 1, the point will show 
   the pixel size between world space and texture map, if there is a magnification, we will sample from the relatively high resolution mipmap level.
   When there is a minification which would potentially result in Moire Pattern, we will sample the low resolution mipmap level.
 </p>
+<ul>
+  <li>First, we need to calculate the level of certain pixel using the formula D = log2(max(sqrt((du/dx)^2 + (dv/dx)^2), (sqrt((du/dy)^2 + (dv/dy)^2))</li>
+    <li>Then, for nearest level sampling, we switch to the mipmap level that is nearest to level D by rounding up D and performs
+      whatever pixel sampling method desired
+      <li>For bilinear level sampling, we take the result from level floor(D) and level ceil(D) and averge them out to get the desired pixel </li>
+</ul> 
 <p>
   When we apply pixel sampling and level sampling, the speed will decrease, and more specifically, with no pixel/level sampling being the fastest, nearest sampling will be faster than bilinear sampling.
   Similarly, the memory usage will increase, with bilinear sampling takes up more memory. In terms of Antialiasing, bilinear sampling performs better than nearest sampling.
