@@ -1,7 +1,331 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Fanjia Yan, CS184-AAT</h2>
+
+  <br><br>
+
+  <div>
+
+    <h2 align="middle">Overview</h2>
+    <p>In the project, we are manipulating the trianglar mesh to create geometric modeling. Throughout the project,
+      we explore Bezier curves and the half edge data structure.
+    </p>
+
+    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+    <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+
+    <p>De Casteljau's algorithm is a numerical method that takes in a set of points and recursively linear interpolate points for Bézier curves,
+      I implement the algorithm by traversing through all the points and lerp each adjacent points for (n - 1) times and return the 
+      (n - 1) points for each recursion. The base case will be when there is only one point. 
+    </p>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q1-1.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 First Level</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1-2.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 Second Level</figcaption>
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/Q1-3.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 Third Level</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1-4.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 Fourth Level</figcaption>
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/Q1-5.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 Fifth Level</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1-6.png" align="middle" width="400px" />
+            <figcaption align="middle">t = 0.5 Final View</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <br>
+    <p>Here are the screenshot and recording of readjusting the points and t value:</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q1.gif" align="middle" width="400px" />
+            <figcaption align="middle">movement of adjusting t</figcaption>
+          </td>
+          <td>
+              <img src="images/Q1-7.png" align="middle" width="340px" />
+              <figcaption align="middle">rearrangement of control points</figcaption>
+            </td>
+            </tr>
+            <tr>
+          <td>
+            <img src="images/Q1-8.png" align="middle" width="340px" />
+            <figcaption align="middle">screenshot of different t value</figcaption>
+          </td>
+          <td>
+            <img src="images/Q1-9.png" align="middle" width="340px" />
+            <figcaption align="middle">screenshot of different t value</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+    <p>For each control point in the vector, there are 4 subpoints. We first traverse through all the control points
+      and perform De Casteljau Algorithm using parameter u on each control point which will output an interpolated point. We then store
+    the interpolated points in a vector. Lastly, we return the result of performing De Casteljau Algorithm again on the new vector with parameter v. </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q2.png" align="middle" width="400px" />
+            <figcaption align="middle">teapot.bez</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h2 align="middle">Section II: Sampling</h2>
+
+    <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+    <p>We calculate the Average normals by traversing through all the neighbour of halfedge.
+      For each halfedge we encounter, we find the three vertices of the triangle and calculate the area.
+      Then we add the area times the normal vector of the face to the average normal. Ultimately, we return
+      the unit vector of the weighted normal.
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q3-1.png" align="middle" width="500px" />
+            <figcaption align="middle">flat shading</figcaption>
+          </td>
+          <td>
+            <img src="images/Q3-2.png" align="middle" width="500px" />
+            <figcaption align="middle">phong shading</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 4: Half-edge flip</h3>
+    <p>In order to implement edge flip, I create a labeled graph before and after the edge flip for reference when
+    trying to code. I first list out all the halfedges,vertices,edges,faces the two adjacent triangles can have and label them.
+    Then for each hafledges we use setneighbor to reassign all the connected edges,vertices, and faces after the flip according to
+  the graph we make. Finally, For all the vertices, edges, and faces variables, we reassign the corresponding halfedge after the flip.</p>
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/Q4-2.png" align="middle" width="800px" />
+          <figcaption align="middle">Teapot before edge flipping</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/Q4-1.png" align="middle" width="800px" />
+          <figcaption align="middle">Teapot after edge flipping</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <p>Initially, I did not create a before-and-after edge flip graph so I don't remember which hafledges correspond to which vertices so I 
+    have to restart and map it out first. It takes a while to draw the graph but it makes coding much easier.
+  </p>
+
+
+    <h3 align="middle">Part 5: Half-edge split</h3>
+    <p>Similar to part 4, I created a label graph before and after spilting the triangles for reference. Then I create variables
+      to store all the pointers of halfedges,vertices, edges, and faces. I also created 6 new halfedges, 3 edges, 2 faces, and 1
+    vertex to account for the new elements when spilting. Finally, I assigned the pointer to what it should be after the spilting
+  according to the graph I previously made. The output of the function will be the vertex that was recently created.</p>
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/Q5-1.png" align="middle" width="400px" />
+          <figcaption align="middle">before edge spilting</figcaption>
+        </td>
+        <td>
+          <img src="images/Q5-2.png" align="middle" width="400px" />
+          <figcaption align="middle">after edge spilting</figcaption>
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/Q5-3.png" align="middle" width="400px" />
+          <figcaption align="middle">before edge spilting and flipping</figcaption>
+        </td>
+        <td>
+          <img src="images/Q5-4.png" align="middle" width="400px" />
+          <figcaption align="middle">after edge spilting and flipping</figcaption>
+        </td>
+      </tr>
+      </tr>
+    </table>
+  </div>
+
+    <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+    <ul>
+      <li>First, I iterate through all the vertices in the mesh and calculate the vertices's new position using the formula (1 - n * u) * original_position + u * original_neighbor_position_sum</li>
+      <li>Then, I find the position of new vertices created by edge split by iterating through edges and computing 3/8 * (A + B) + 1/8 * (C + D). </li>
+      <li>After we have the position of all vertices, I iterate through edges and if both vertices of an edge is not newly created then we will spilt them</li>
+      <li>After spilting, we will traverse through edges again and flip those edges with one new vertex and one old vertex</li>
+      <li>Finally, we will replace the position of vertices with the new position/</li>
+    </ul>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+            <img src="images/Q6-1.png" align="middle" width="600px" />
+            <figcaption align="middle">Original</figcaption>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q6-2.png" align="middle" width="500px" />
+            <figcaption align="middle">One Subdivision</figcaption>
+          </td>
+          <td>
+            <img src="images/Q6-3.png" align="middle" width="500px" />
+            <figcaption align="middle">Two Subdivisions</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p>From the screenshot, we can see that the shape of the teapot becomes more natural and realistic after loop subdivision as the geometric shape of the mesh
+      becomes less obvious and the mesh looks moer like a teapot with a lot of curves. The sharper corners are smoothened by the increasing number of loop subdivision. </p>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+              <img src="images/Q6-4.png" align="middle" width="600px" />
+              <figcaption align="middle">Original Cube </figcaption>
+          </tr>
+          <tr>
+            <td>
+              <img src="images/Q6-5.png" align="middle" width="500px" />
+              <figcaption align="middle">with pre-spilting</figcaption>
+            </td>
+            <td>
+              <img src="images/Q6-6.png" align="middle" width="500px" />
+              <figcaption align="middle">without pre-spilting</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <br>
+    <p>Pre-spilting the edge make the mesh more smooth and symmetric because we have more edges during sampling and gives more vertices</p>
+    <br>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/Q6-4.png" align="middle" width="500px" />
+            <figcaption align="middle">normal view of cube </figcaption>
+          </td>
+          <td>
+            <img src="images/Q6-7.png" align="middle" width="500px" />
+            <figcaption align="middle">1st subdivison</figcaption>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q6-8.png" align="middle" width="500px" />
+            <figcaption align="middle">2nd subdivison </figcaption>
+          </td>
+          <td>
+            <img src="images/Q6-9.png" align="middle" width="500px" />
+            <figcaption align="middle">3rd subdivison</figcaption>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/Q6-10.png" align="middle" width="500px" />
+            <figcaption align="middle">4th subdivison</figcaption>
+          </td>
+          <td>
+            <img src="images/Q6-11.png" align="middle" width="500px" />
+            <figcaption align="middle">5th subdivision</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <br>
+    <p> If we pre-process the cube, we can symmetrically upsampling the cube.For example, we could split 
+      the diagonal edge on each face and that will guarentee that the changes in position
+      of the corner vertices/center vertices are the same, which makes the mesh symmetrical. When we do a 
+    subdivison, it spilt the four triangles in one face to sixteen triangles, which retain the symmetry.
+  When we keep spilting, each face will still be radial symmetric because we distinctly seperate a rectangular face into four triangles.</p>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="images/Q6-12.png" align="middle" width="500px" />
+              <figcaption align="middle">pre-processed 2nd subdivision</figcaption>
+            </td>
+            <td>
+              <img src="images/Q6-13.png" align="middle" width="500px" />
+              <figcaption align="middle">pre-processed 3rd subdivision</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+
+    <h2 align="middle">Section III: Optional Extra Credit</h2>
+    <p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+
+    <h3 align="middle">Part 7: Design your own mesh!</h3>
+
+</body>
+
 </html>
