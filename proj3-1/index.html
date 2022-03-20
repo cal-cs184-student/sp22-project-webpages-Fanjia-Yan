@@ -1,7 +1,431 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Fanjia Yan |  CS 184 - PathTracer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Fanjia Yan</h2>
+    <h2 align="middle">https://cal-cs184-student.github.io/sp22-project-webpages-Fanjia-Yan/proj3-1/index.html</h2>
+
+    <div class="padded">
+        <p>In Project 3-1 PathTracer, we start off by building the fundamental block of ray tracing, the ray itself and ray intersection. We implemented
+            ray-plane,ray-triangle, and ray-sphere intersection. Secondly, we want to speed up our rendering by using Bounding Volume Hierarchy(BVH) as our 
+            data structure so that we can increase the speed of ray intersection. Then, we go on building direct and indirect illumination to form global illumination
+        we recursively bounce the ray and track the luminance so the image can be rendered in a real fashion. Lastly, we implement the adaptive sampling to 
+    sample more frequently on area that is harder to converge. </p>
+
+    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <p>To start off part 1, we fill in the generate_ray() function. The function takes in normalized coordinate in an image
+            and will output a ray in the world space. What I did was first convert the image space coordinate into camera space using a series of transforms.
+        Then I create a ray using (0,0,0) as origin and (input - origin) as directional vector to generate a ray in camera space. Lastly, I transform the ray back 
+    to image space and return. </p>
+        <p>After that, I implemented the raytrace_pixel() function. We are provided with ns_aa as the number of sample, and for each sampling, I shoot a ray and accumulate 
+            the radiance. Finally, I average out the radiance and update the pixel in the sample buffer.
+        </p>
+        <p>Next, I implemented the ray-triangle intersection. The algorithm I use is Moller Intersection Algorithm that was introduced in class. The Moller Algorithm input the three vertices 
+            of the triangles as well as the ray's origin and direction. The algorithm stems from the idea of Cramer's Rule and after algebraic manipulation and matrix multiplication, it returns 
+            the time of intersection "t" and two barycentric coordinate "b1" and "b2". For has_intersect() function, we just need to judge if t is between ray.min_t and ray.max_t and whether the
+            barycentric coordinate is between 0 and 1. If both condition meets, there is an intersection. For intersect(), if there is an intersection, we populate the an Intersection variable isect
+            which contains the time, normal vector, primitives and bsdf. After that, we return true for any intersection. </p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/Q1-1.png" width="480px" />
+                    <figcaption align="middle">Screenshot of Moller Algorithm from lecture slides</figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>Lastly, I implemented the ray-sphere intersection, which is more straightforward than the ray-triangle intersection. We simply solve for the equation</p>
+        <p align="middle"><pre align="middle">(o + td -c )^2 = R^2</pre></p>
+        <p>And then check if t is between min_t and max_t. For intersection(), we will again populate the isect variable. </p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/Q1-2.png" width="480px" />
+                    <figcaption align="middle">Rendering of CBspheres_lambertian.dae</figcaption>
+                </tr>
+            </table>
+        </div>
+        
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q1-3.png" width="480px" />
+                    <figcaption align="middle">Rendering of CBcoil.dae</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q1-4.png" width="480px" />
+                        <figcaption align="middle">Rendering of CBgems.dae</figcaption>
+                </td>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
+    <p>In order to pre-process and construct the BVH, I did the following:</p>
+    <ul>
+        <li>1. put the primitive from start to end in one bounding box</li>
+        <li>2. create a root node with the bounding box </li>
+        <li>3. if the number of element in bounding box is less than max_leaf_size, we return the node with current bounding box</li>
+        <li>4. choose the longest axis "dim" = one of {x,y,z} of the bounding box </li>
+        <li>5. for each primitive in the bounding box, find its bounding box's centroid position for "dim". Then compute the median of 
+            all the value computed.</li>
+        <li>6. use the median at longest axis and parition from start to end by the criteria: the primitive's bounding box's centroid at dimension dim 
+            is smaller than the median. </li>
+        <li>7. after paritioning using std::partiion, it returns a std::vector [Primitive *]::iterator "spilt" similar to "start" and "end".</li>
+        <li>8. we want to avoid all primitives on the same side so we check if the size_t of "spilt" - "start" and the size_t of "end" - "spilt"  are equal to zero.
+            If they are equal to zero, we return the root node with current bounding box to avoid infinite loop.
+        </li>
+        <li>9.we then recursively call construct_bvh(start, spilt, max_leaf_size) and construct_bvh(spilt, end, max_leaf_size)
+            and assign it as the left and right node of the root node we previously create and return the node </li>
+    </ul>
+    <p>The heuristic I implement is to spilt the left and right node based on median of the longest axis.</p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q2-1.png" width="480px" />
+                    <figcaption align="middle">Rendering of cow.dae with BVH acceleration</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q2-2.png" width="480px" />
+                        <figcaption align="middle">Rendering of maxplanck.dae with BVH acceleration</figcaption>
+                </td>
+            </tr>
+            <tr>
+            <td>
+                <td align="middle">
+                <img src="images/Q2-3.png" width="480px" />
+                <figcaption align="middle">Rendering of dragon.dae with BVH acceleration</figcaption>
+            </td>
+            <td>
+                <td align="middle">
+                    <img src="images/Q2-4.png" width="480px" height ="360px" />
+                    <figcaption align="middle">Rendering of CBlucy.dae with BVH acceleration</figcaption>
+            </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <p align = "middle">BVH acceleration comparison chart</p>
+    <table align = "center" border = "1px" >
+        <tr>
+          <th>File</th>
+          <th># of Primitives</th>
+          <th>Rendering Duration(s)</th>
+          <th>Speed Up</th>
+        </tr>
+        <tr>
+          <td>cow.dae</td>
+          <td>5856</td>
+          <td><span style="color: #ff0000">15.82</span> / <span style="color: #0000ff">0.05</span></td>
+          <td>x316</td>
+        </tr>
+        <tr>
+          <td>maxplanck.dae</td>
+          <td>50801</td>
+          <td><span style="color: #ff0000">186</span> / <span style="color: #0000ff">0.11</span></td>
+          <td>x1690</td>
+        </tr>
+        <tr>
+            <td>dragon.dae</td>
+            <td>105120</td>
+            <td><span style="color: #ff0000">379</span> / <span style="color: #0000ff">0.06</span></td>
+            <td>x6316</td>
+          </tr>
+        <tr>
+            <td>CBlucy.dae</td>
+            <td>133796</td>
+            <td><span style="color: #ff0000">478</span> / <span style="color: #0000ff">0.07</span></td>
+            <td>x6828</td>
+          </tr>
+      </table>
+      <br>
+      <p>From the chart above, we can see that cow.dae has a less complex structure in a sense that it only has 5856 primitives
+          Without BVH acceleration, cow.dae takes 15.82 seconds which is not a lot but the BVH acceleration still brinds the rendering 
+          duration down to 0.05 seconds. For maxplanck.dae,dragon.dae,CBlucy.dae, those three meshes have a relatively complex structure ranging 
+          from 50,000 to 133,000 primties. By observation, when we render without BVH acceleration, the rendering duration grows as the number of
+          primitive increases. That is because the method iterate through all the primitives and find intersection which will take O(n) time
+          complexity. By contrast, the BVH accelerated method gives roughly the same time regardless the number of primitives. That is because we 
+          store the bounding box into a binary tree structure and traversing through the tree will take best case O(logn), worst case O(n). The 
+          heuristic I implement is to spilt the left and right node based on median of the longest axis. The runtime of the improved ray tracing 
+          method demonstrates that the current heuristic provides sounding acceleration and spilt the primtives roughly even, which makes the
+          overall runtime approach to O(logn). 
+      </p>
+
+    <h2 align="middle">Part 3: Direct Illumination</h2>
+        <p>In the section of the project, I implement the direct lighting function with both hemisphere sampling and important sampling.
+        The procedure is the following:
+        </p>  
+        <ul>
+            <li>1. for this task, we are using DiffuseBSDF as our BSDF. DiffuseBSDF reflects the same amount of reflectance regardless of the incident and
+                going light. Therefore DiffuseBSDF->f(w_out,w_in) returns the reflectance * (1/PI) for all w_out and w_in.
+            </li>
+            <li>2. after that, I implement the zero_bounce Illumination. Zero bounce Illumination only contain the light sources reflectance so we simply return the 
+                emission of bsdf of the intersection with camera.
+            </li>
+            <li>3. finishing the zero bounce, I begin to implement one_bounce_radiance with hemisphere sampling. We will sample from the hemisphereSampler num_samples times and
+                for each sample we will convert it into world space, denoted as "w_world". Then we generate a shadow ray from w_world with direction "hit_p" + EPS_F * "w_world". 
+                The EPS_F * "w_world" is used to account for error. Then, we cast the shadow ray and see if intersect with our BVH. If intersected, we will accumulate the "L_out" 
+                ,which is our return by 0. If not intersected, we know it is now shadow and we accumulate "L_out" by calculating the input ray's irradiance using monte carlo estimator.
+                Finally, after we finish sampling, we average out the "L_out" by "num_samples" as our hemisphere sampling lighting. We use the output of this function to update the 
+                "one_bounce_radiance" as well as the "est_radiance_global_illumination" to render our result. 
+            </li>
+            <li>4. finally, we implement the important sampling as an alternative method to evaluate radiance. Important sampling will emphasize its sampling on lighting sources. Therefore,
+                we traverse through all the light sources, and for each light source, we use light->is_delta_light() to test if it is a point light. If the light is point light, we set
+                the number of sampling to be 1 since sampling the same point light will always give us the same result. If it is not a point light, we set the num_samples = ns_aa which is
+                the same as hemisphere sampling. After that, we loop through num_samples and sample light using light->sample_L. The function will output the sample light's incident point, 
+                distance to light, and pdf. We convert incident point into world space denoted as "w_in" and use it along with "w_out" and "EPS_F" to generate a shadow ray. If the shadow
+                ray intersect the BVH, then we will accumulate the "L_out_sample" by zero. Else, we will accumulate the "L_out_sample" by calculating the irradiance using monte carlo estimator.
+                After we finish each light source, we calculate "L_out_sample"/"num_samples" and add it to our output "L_out".
+            </li>
+        </ul>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <td align="middle">
+                        <img src="images/Q3-1.png" width="480px" />
+                        <figcaption align="middle">CBbuuny.dae: hemisphere sampling, #camera ray per pixel = 64, #samples per area of light = 32</figcaption>
+                    </td>
+                    <td>
+                        <td align="middle">
+                            <img src="images/Q3-2.png" width="480px" />
+                            <figcaption align="middle">CBbuuny.dae: important sampling, #camera ray per pixel = 64, #samples per area of light = 32</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q3-3.png" width="480px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: hemisphere sampling, #camera ray per pixel = 64, #samples per area of light = 32</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q3-4.png" width="480px" height ="360px" />
+                        <figcaption align="middle">CBspheres_lambertian.dae: important sampling, #camera ray per pixel = 64, #samples per area of light = 32</figcaption>
+                </td>
+                </tr>
+            </table>
+        </div>
+        <p>From the above renderings, we observe that with high camera ray per pixel and large number of samples per area of light, both hemisphere and importance
+            sampling converge to a reasonable degree of accuracy in terms of shading and shadow. This shows that as we shoot more rays into the scene and sample more
+            , the renderings will approach to reality for both methods. Constrasting the hemisphere sampling renderings with importance sampling renderings, hemisphere
+            rendering has more noise despite high sampling rate. That is because the method sample uniformly of the entire hemisphere while our light sources only lie in
+            a tiny portion of the hemisphere. This results in a lack of sampling at the light sources which create those dark "noise" spots in the rendering. For importance
+            sampling, we only sample the direction that are able to hit the light, which maximize the ability the trace the light source and luminate the scene. This comes 
+            with the tradeoff that if we are running with a low sample rate, there will be a lot of point light reflection scattered in the scene which leads to inaccuracy
+            of the artifact. Despite imperfections, the importance sampling is a more efficient sampling method as it converges more quickly than the uniform hemisphere 
+            sampling which enables us to render the artifact accurately without sampling too many times.
+        </p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <td align="middle">
+                        <img src="images/Q3-5.png" width="480px" />
+                        <figcaption align="middle">dragon.dae: hemisphere sampling, #camera ray per pixel = 1, #samples per area of light = 1</figcaption>
+                    </td>
+                    <td>
+                        <td align="middle">
+                            <img src="images/Q3-6.png" width="480px" />
+                            <figcaption align="middle">dragon.dae: important sampling, #camera ray = 4 per pixel, #samples per area of light = 1</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q3-7.png" width="480px" />
+                    <figcaption align="middle">dragon.dae: hemisphere sampling, #camera ray per pixel = 16, #samples per area of light = 1</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q3-8.png" width="480px" height ="360px" />
+                        <figcaption align="middle">dragon.dae: important sampling, #camera ray = 64 per pixel, #samples per area of light = 1</figcaption>
+                </td>
+                </tr>
+            </table>
+        </div>
+    <h2 aligh="middle">Part 4: Global Illumination</h2>
+    <p>In order to implement the global illumination, I do the following:</p>
+    <ul>
+        <li>1. first, set "L_out" to the value of "one_bounce_radiance" which we have implemented in the last part.</li>
+        <li>2. set the russian roulette probability to be 0.3, i.e., we have 70% chance to keep bouncing the ray.</li>
+        <li>3. if the max_ray_depth is less than 2, we simply return the L_out since we don't have to trace it anymore</li>
+        <li>4. Else, we will use russian roulette to decide if we are going to keep bouncing the ray. We create a ray with 
+            starting point "hit_p" pointing with direction sampled from bsdf. If the ray intersects with the bvh, that means
+            we need to estimate the amount of light that come in and therefore we recursively call "at_least_one_bounce_radiance"
+            on the newly-created ray and find its magnitude of lumination. After the recursive call, we add  the luminance divided
+            by the russian roulette coefficient to L_out and return it.
+        </li>
+    </ul>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q4-1.png" width="480px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: #camera ray per pixel = 16, #samples per area of light = 1024</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q4-2.png" width="480px" />
+                        <figcaption align="middle">CBbuuny.dae: #camera ray = 16 per pixel, #samples per area of light = 1024</figcaption>
+                </td>
+            </tr>
+            <tr>
+            <td>
+                <td align="middle">
+                <img src="images/Q4-3.png" width="480px" />
+                <figcaption align="middle">CBspheres_lambertian.dae: direct illumination </figcaption>
+            </td>
+            <td>
+                <td align="middle">
+                    <img src="images/Q4-4.png" width="480px" height ="360px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: indirect illumination</figcaption>
+            </td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q4-5.png" width="480px" />
+                    <figcaption align="middle">CBbuuny.dae: max_ray_depth = 0</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q4-6.png" width="480px" />
+                        <figcaption align="middle">CBbuuny.dae: max_ray_depth = 1</figcaption>
+                </td>
+            </tr>
+            <tr>
+            <td>
+                <td align="middle">
+                <img src="images/Q4-7.png" width="480px" />
+                <figcaption align="middle">CBbuuny.dae: max_ray_depth = 2 </figcaption>
+            </td>
+            <td>
+                <td align="middle">
+                    <img src="images/Q4-8.png" width="480px" height ="360px" />
+                    <figcaption align="middle">CBbuuny.dae: max_ray_depth = 3</figcaption>
+            </td>
+            </tr>
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q4-9.png" width="480px" />
+                    <figcaption align="middle">CBbuuny.dae: max_ray_depth = 100 </figcaption>
+                </td>
+                </tr>
+        </table>
+    </div>
+    <p>From a series of CBunny with max_ray_depth: 0,1,2,3,100, we can see that as the max_ray_depth increases, the scene is more ligt up and luminance is higher.
+        In 0 bounce image, we can only see the light emitted directly from the light source, i.e., the above light. For one bounce image, this is basically the direct 
+        illumination of the scene with light source and light bounce of from object, which is the same as what we have implemented in part 3. 
+         As the max_ray_depth increases, we get a more luminous and detailed image because we are tracing the ray bouncing off from objects. The 100 max depth is where 
+         the rendering feels the most rich in detail and proximal to reality. One thing I notice is that, with the russian roulette termination, we  get a relatively quick
+          rendering speed in comparison to lower max_ray_depth. That is because we do not trace every ray into 100's bounce but instead terminate the ray tracing based on 
+        probability of 0.3 which the the russian roulette coefficient and the expected value of the luminance in the rendering will still be the same. </p>
+    <br>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q4-10.png" width="480px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 1</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q4-11.png" width="480px" />
+                        <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 2</figcaption>
+                </td>
+            </tr>
+            <tr>
+            <td>
+                <td align="middle">
+                <img src="images/Q4-12.png" width="480px" />
+                <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 4 </figcaption>
+            </td>
+            <td>
+                <td align="middle">
+                    <img src="images/Q4-13.png" width="480px" height ="360px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 8</figcaption>
+            </td>
+            </tr>
+            <tr>
+            <td>
+                <td align="middle">
+                <img src="images/Q4-14.png" width="480px" />
+                <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 16 </figcaption>
+            </td>
+            <td>
+                <td align="middle">
+                    <img src="images/Q4-15.png" width="480px" height ="360px" />
+                    <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 64</figcaption>
+            </td>
+            </tr>
+            <tr align = "middle">
+                <td >
+                    
+                    <td align="center" >
+                        <img align = "middle" src="images/Q4-16.png" width="480px" height ="360px" />
+                        <figcaption align="middle">CBspheres_lambertian.dae: sample-per-pixel = 1024</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>As shown in the graph, with the increase in sample per pixel,the noise level of the rendering devreases porportionally. </p>
+    <h2 align="middle">Part 5: Adaptive Sampling</h2>
+    <p>For adaptive sampling, we implemented the algorithm provided to detect speed of converge. First we add accumulators s1, s2 
+        and use them to find mean and variance. After that, we calculate I = 1.96 * mean / sqrt(variance) and compare it with the 
+        max_tolerance. If it is smaller than the max_tolerance, we break the samping loop and put the averaged luminance in the sample
+        buffer. Else, we keep looping until we sample "ns_aa" amount of time. In order to improve efficiency, we only test convergent every
+        "samplesPerBatch" time. By implementing this method, we sample more frequently on the part of the image that is hard to converge
+        and sample less frequently on area such as light source that is easily converged. 
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <td align="middle">
+                    <img src="images/Q5-1.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae: Rendering</figcaption>
+                </td>
+                <td>
+                    <td align="middle">
+                        <img src="images/Q5-2.png" width="480px" />
+                        <figcaption align="middle">CBbunny.dae: Sample rate graph</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>As shown in the sample rate photo, the light source is sampled the least frequently, following by the cornell box.
+        The most sampled area lies within the artifact bunny and the shadow which is relatively hard to converge.
+    </p>
+</body>
 </html>
