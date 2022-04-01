@@ -1,7 +1,165 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>PathTracer 3-1 |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Fanjia Yan</h2>
+
+    <div class="padded">
+        <p>In part 2 of the PathTracer, I implmented the mirror and glass material as well as the microfacet material. For each material,
+            I implmented the bsdf as well as important sampling. After the implemented, my PathTracer is able to render mirror material
+            using reflection, glass material using refraction, and metal material using microfacet. 
+
+    <h2 align="middle">Part 1: Mirror and Glass Materials</h2>
+        <p>In Part 1, I implmented mirror and glass model for reflection and refraction.Specficially, the first function we implement is reflect(). It
+          is simply flipping the z-value of the object coordinate. After finishing implement the reflect, I work on refract(). The methodology follows the Snell's Law.
+          First we decide whether the ray is exiting or entering. Then, we take advantage of the canonical form of spherical coordinate and use the "wo" to calculate "win".
+          Lastly, I implement the glass material bsdf. The structure follows what has been provided on the spec. I approximate the Fresnel coefficient using Schlick's approximation 
+          and based on the coefficient and the result of coin flip, the glass material is either going to reflect or refract.
+        </p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                      <img src="images/0.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 0 </figcaption>
+                      <figcaption align="middle">only the light source is shown </figcaption>
+                    </td>
+                    <td>
+                      <img src="images/1.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 1 </figcaption>
+                      <figcaption align="middle">the cornell box is light up with ray depth of 1 </figcaption>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <img src="images/2.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 2 </figcaption>
+                      <figcaption align="middle">the mirror sphere is shown but the glass sphere is still dark </figcaption>
+                    </td>
+                    <td>
+                      <img src="images/3.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 3 </figcaption>
+                      <figcaption align="middle">glass sphere is shown while reflection is not shown</figcaption>
+                    </td>
+                  </tr>
+                  <br>
+                  <tr>
+                    <td>
+                      <img src="images/4.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 4 </figcaption>
+                      <figcaption align="middle">the glass sphere in mirror sphere is shown </figcaption>
+                    </td>
+                    <td>
+                      <img src="images/5.png" align="top" width="400px" border = "1px solid green"/>
+                      <figcaption align="middle">max_ray_depth = 5 </figcaption>
+                    </td>
+                  </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/100.png" align="top" width="400px" border = "1px solid green"/>
+                        <figcaption align="middle">max_ray_depth = 100 </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <p>At depth of 0, we can only see the luminance from light source since we don't allow any bounce. At depth of 1,
+            the light bounce on the cornell box and because the two spheres are purely reflective, the lights haven't bounced on
+            the spheres yet. At depth of 2, the mirror sphere receives lights bouncing from the cornell box and reflect into camera. 
+            At depth of 3, the glass sphere shows up and the light comes from the cornell box. In addition to that, there are lights under the glass sphere as a result of reflection.
+            It is interesting to note that or both 
+            depth 2 and 3, the mirror sphere has a reflection of glass sphere that is completely dark. That is because we haven't traced
+            the ray to enough depth to show the multi-bounces. At depth of 4 and 5, we see that the glass sphere reflection in mirror sphere
+            render accurately which means the ray bounce enough time to reflect glass sphere luminance to mirror sphere. Comparing depth of 100
+            to depth of 4,5, I did not observe much change except the fact that the rendering is brighter. That is because the Russian Roulette will terminate the ray trace probablistically.
+            In addition, the higher the depth the ray is at, the lower the lumiance it has, so it has less effect on the overal rendering.
+        </p>
+    <h2 align="middle">Part 2: Microfacet Materials</h2>
+    <p>In part 2, I implement the microfacet material from the brdf to sampling. First, I implement BSDF::f() based on the provided equation. Then I update the D() and F() which are used in f(). 
+      For D(),it is a normal distribution function using Beckmann distribution. F() stands for Fresnel, and we use the given approximation to calculate air-conductor Fresnel term. After implementing f(),
+      we move onto important sampling as we know that microfacet material can have some area that requires more sampling. To achieve this, based on the normal distribution function we previously use,
+      we can determine the pdf of theta and phi. Then we integrate and invert those pdf to get the number of sample we want for specific pair of theta and phi. Using the theta and phi with respect to normal h,
+      we calculate the final pdf of sampling the wi, which will be our output.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                  <img src="images/part2_0.005.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">alpha = 0.005 </figcaption>
+                </td>
+                <td>
+                  <img src="images/part2_0.05.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">alpha = 0.05 </figcaption>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <img src="images/part2_0.25.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">alpha = 0.25</figcaption>
+                </td>
+                <td>
+                  <img src="images/part2_0.5.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">alpha = 0.5</figcaption>
+                </td>
+              </tr>
+        </table>
+    </div>
+    <p>By observation, artifacts with lower alpha value render similar to glass material and have a higher tendency to
+        reflect the lumiance from the surrounding. The artifact is also more smooth in texture. By contrast, artifacts with
+    high alpha value does not reflect much of its surrounding. Those artifacts are more rough. </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                  <img src="images/part2_important.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">important sampling</figcaption>
+                </td>
+                <td>
+                  <img src="images/part2_not_important.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">hemisphere sampling </figcaption>
+                </td>
+              </tr>
+        </table>
+    </div>
+    <p>Because the artifact has Microfacet material rather than diffuse material, the hemispheric sampling will create a relatively large noise on
+        the artifact, in our case is the rabit. That is because Microfacet material needs more sampling in specific pixel area rather than the other.
+        On the other hand, important sampling decreases the noise signifcantly.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                  <img src="images/part2_gold.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">Gold Mateiral</figcaption>
+                </td>
+                <td>
+                  <img src="images/part2_indium.png" align="top" width="400px" border = "1px solid green"/>
+                  <figcaption align="middle">Iron Material </figcaption>
+                </td>
+              </tr>
+        </table>
+    </div>
+    <p>I obtain the value of gold and iron material from https://refractiveindex.info. For each material I sample the values of eta and k for Red, 
+      Green, and Blue and fill it into the .dae file. Gold material is more shiny while the iron material  </p>
+</o>
+</div>
+</body>
 </html>
