@@ -1,7 +1,474 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2017</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">YOUR NAME, CS184-AAT</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>In the project ClothSim, we use spring-mass structure to conduct the simulation for our cloth rendering. During the build-up of the spring
+  mass system, we use Verlet Integration to calcualte the point_mass location at next time step and use a hashing function to detect collision.
+  After the simulation works well, we dive into building a variety of shading program including: Blinn-Phong, Bump Mapping, Displacement Mapping,
+  Texture Mapping, and Environment-mapped Reflections. Our final product is a cloth simulation interface where we can adjust spring related variables
+  as well as shading methods. 
+</p>
+<ul>
+  <li>Part 1: Masses and springs</li>
+    <li>Part 2: Simulation via numerical integration</li>
+    <li>Part 3: Handling collisions with other objects</li>
+    <li>Part 4: Handling self-collisions</li>
+    <li>Part 5: Shaders (has its own page, located here)</li>
+</ul>>
+
+<h2 align="middle">Part I: Masses and springs</h2>
+<p>In this part, we are to fill buildGrid() function. First, we populate the point_mass by creating a (num_height_points * num_width_points) grid and put PointMass into the grid based on whether the orientation is horizontal or vertical.
+  After that we add three types of strings: Structural, Shearing, Bending into string vector.  </p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td>
+              <img src="images/1-1.png" align="top" width="500px" border = "1px solid green"/>
+              <figcaption align="middle">without any shearing constraints</figcaption>
+            </td>
+            <td>
+              <img src="images/1-2.png" align="top" width="500px" border = "1px solid green"/>
+              <figcaption align="middle">with only shearing constraints </figcaption>
+            </td>
+          </tr>
+    </table>
+</div>
+<div align="center">
+  <table style="width=100%">
+      <tr>
+          <td>
+            <img src="images/1-3.png" align="top" width="500px" border = "1px solid green"/>
+            <figcaption align="middle">with all constraints</figcaption>
+          </td>
+        </tr>
+  </table>
+</div>
+<h2 align="middle">Part II: Simulation via numerical integration</h2>
+<p>For this part, I implmenet part of the Cloth::simulate(). First, I calculate the total force by adding the force from acceleration
+  and from the spring interaction by Hooke's Law. After that, I use Verlet inegration to calculate the position of x at (t + dt) based on 
+  the position of x at t, acceleartion, and damping constant. Lastly, we impose constraint on the string by correcting the two point mass position
+  within 10% distance of rest_length.
+</p>
+<div align="center">
+  <table style="width=100%">
+      <tr>
+          <td>
+            <img src="images/2-9.png" align="top" width="500px" border = "1px solid green"/>
+            <figcaption align="middle">Start of simulation</figcaption>
+          </td>
+          <td>
+            <img src="images/2-10.png" align="top" width="500px" border = "1px solid green"/>
+            <figcaption align="middle">during simulation</figcaption>
+          </td>
+  </table>
+  <div align="center">
+    <table style="width=100%">
+          <tr>
+            <td>
+              <img src="images/2-1.png" align="top" width="500px" border = "1px solid green"/>
+              <figcaption align="middle">after simulation</figcaption>
+            </td>
+          </tr>
+    </table>
+</div>
+<p>The spring constant in Hooke's Law is an indicator of the stiffness of the spring. If we decrease the spring value from ks = 5000 
+  to ks = 100. As shown in the image below, the cloth has more wrinkles but smaller and the texture seems more smooth and less stiff. 
+  If we increase the spring constant to ks = 50000, the overal spring movement is stiff and there are less wavey wrinkles on the cloth.</p>
+  <table style="width=100%">
+    <tr>
+        <td>
+          <img src="images/2-2.png" align="top" width="500px" border = "1px solid green"/>
+          <figcaption align="middle">ks = 100</figcaption>
+        </td>
+        <td>
+          <img src="images/2-3.png" align="top" width="500px" border = "1px solid green"/>
+          <figcaption align="middle">ks = 50000</figcaption>
+        </td>
+</table>
+<p>Another variable in our simulation is density. If we decrease the density from 15 to 1. With density being small and surface are stay the same,
+  the cloth becomes lighter, which is shown in the image below. By contrast, if we increasr the density to 100, the cloth is heavier. We can observe 
+from the image that the pinned side of the cloth is pushing down the cloth significantly and exerting pressure due to its weight. </p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/2-4.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">density = 1</figcaption>
+      </td>
+      <td>
+        <img src="images/2-5.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">density = 100</figcaption>
+      </td>
+</table>
+<p>The last variable that impact the simulation is the damping constant. Damping variable influences the time it takes for the Cloth to stop oscillating.
+  If we set the damping value to be 0, the cloth will keep oscillating and the energy does not dissipate. As we increase the value of damping, the cloth will come
+  to a stop more and more quickly because the energy loss increase with the damping value. When we set damping value to 1, the oscillation immediate stops and the cloth
+  comes to a stop.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/2-7.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">damping = 0</figcaption>
+      </td>
+      <td>
+        <img src="images/2-8.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">damping = 1</figcaption>
+      </td>
+</table>
+<p>The images below are pinned4.json where the four endpoint of the cloth is pinned.</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/2-11.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">damping = 0</figcaption>
+      </td>
+      <td>
+        <img src="images/2-12.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">damping = 1</figcaption>
+      </td>
+</table>
+<h2 align="middle">Part III: Handling collisions with other objects</h2>
+<p>In part 3 of the project, we implemented the collision of sphere and plane. For both collision method, 
+  we calculate the tangent_point which is the point of intersection and update the current position by applying 
+  correction_vector on the last position.
+</p>
+<p>The image below is a series of cloth falling onto a sphere with different spring constants. By observation, we can see that
+  with smaller spring constant, the cloth is more tight around the sphere and the rendering gives out a sense that the cloth is heavy and
+pushing down on the sphere. On the other hand, with a larger spring constantm, the cloth is more flexible and dangling around the sphere. It gives a feeling
+that the cloth is relatively light in weight. </p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/3-1.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">ks = 5000</figcaption>
+      </td>
+      <td>
+        <img src="images/3-2.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">ks = 500</figcaption>
+      </td>
+</table>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/3-3.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">ks = 5000</figcaption>
+      </td>
+    </tr>
+</table>
+<p>Below is the rendering of the plane.json where the cloth falls onto a plane and collide. The implementation of plane collider is similar 
+  to the sphere collider except for the surface offset which we use to account for the slight displacement of point mass crossing over the plane.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/3-4.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">collision with plane</figcaption>
+      </td>
+    </tr>
+</table>
+<h2 align="middle">Part IV: Handling self-collisions</h2>
+<p>In this part of the project, we deal with the self collision between the point mass in the cloth to achieve more realistic simulation. The first two functions
+  we have implemented is hash_position() and build_spatial_map(). For hash_function, I use pow(31,2)* x + pow(31,1) * y + pow(31,0) * z as the hash function since
+  31 is a prime so it will create less collision. After that,we fill in the build_spatial_map(). We iterate through all point mass and calculate the hash value of
+  the point mass and fill it in a hash table. The purpose of this is to detect the point mass that are really close to each other and will be used to computation of 
+  self-collision later. For the last function, we implement self_collide(). For the specific point mass, we look up the hash table with its hash value to get the candidate
+  that the point mass will collide. Then we determine whether it is 2 * thickness apart from each other. If it is less than 2 * thickness, we will apply correction so that 
+  they are apart from each other 2 * thickness away. 
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/4-1.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">the beginning of the simultion</figcaption>
+      </td>
+    </tr>
+</table>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/4-2.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">the cloth is falling</figcaption>
+      </td>
+      <td>
+        <img src="images/4-3.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">the cloth starts to fold</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/4-4.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">the cloth rests on the ground and keeps folding</figcaption>
+    </td>
+    <td>
+      <img src="images/4-5.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">the cloth comes to steady state</figcaption>
+    </td>
+</tr>
+</table>
+<p>Beginning the simulation, the cloth starts to collide with each other, creating the wave shapes on the cloth. When it falls on the the ground
+  different layers of cloth emerges as a result of collisiion and due to the spring constant, the cloth will do some foldings until it comes to rest.
+</p>
+<p>Below is a series of image with spring constant ks = 50, 5000, and 50000. We can observe that as the spring constant increases, the cloth becomes more smooth and 
+  less wavey, which means that the spring does not bounce that often. For ks = 50, we see that the cloth is constantly folding and bounce a lot of time when it falls down.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/4-6.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">ks = 50, cloth falling</figcaption>
+      </td>
+      <td>
+        <img src="images/4-7.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">ks = 50, steady state</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/4-8.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">ks = 5000, cloth falling</figcaption>
+    </td>
+    <td>
+      <img src="images/4-9.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">ks = 5000, steady state</figcaption>
+    </td>
+</tr>
+<tr>
+  <td>
+    <img src="images/4-10.png" align="top" width="460px" border = "1px solid green"/>
+    <figcaption align="middle">ks = 50000, cloth falling</figcaption>
+  </td>
+  <td>
+    <img src="images/4-11.png" align="top" width="460px" border = "1px solid green"/>
+    <figcaption align="middle">ks = 50000, steady state</figcaption>
+  </td>
+</tr>
+</table>
+<p>Below is a series of image with density ranging from 1, 15, to 50. We can see that with low density, there is not much force pressing down the cloth and the cloth
+  looks like a paper falling down. When the density is really high, we can see that the cloth is pressed down to the ground quickly when it touches the floor. It also folds itself more often.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/4-12.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">density = 1, cloth falling</figcaption>
+      </td>
+      <td>
+        <img src="images/4-13.png" align="top" width="460px" border = "1px solid green"/>
+        <figcaption align="middle">density = 1, steady state</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/4-14.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">density = 15, cloth falling</figcaption>
+    </td>
+    <td>
+      <img src="images/4-15.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">density = 15, steady state</figcaption>
+    </td>
+</tr>
+<tr>
+  <td>
+    <img src="images/4-16.png" align="top" width="460px" border = "1px solid green"/>
+    <figcaption align="middle">density = 50, cloth falling</figcaption>
+  </td>
+  <td>
+    <img src="images/4-17.png" align="top" width="460px" border = "1px solid green"/>
+    <figcaption align="middle">density = 50, steady state</figcaption>
+  </td>
+</tr>
+</table>
+<h2 align="middle">Part V: Shaders</h2>
+<p>In the last part of the project, we implement a variety of shaders. Shader program is a program that utilizes the computing power of GPU
+  and will run in parallel. The shader programs takes in color or texture map and will output information such as color or transformation on vertex
+  and pixel. There are two types of shaders: vertex shader and fragment shader. Vertex shader generally apply transformation to the vertices after
+  rasterization. Fragment shaders uses the geometric attributes computed from the vertex shaders and use it to color the rendering. In order to generate
+  lighting and material effect, we first use the vertex shaders to transform the vertices. Then we will apply the fragment shader to piece together the 
+  fragment and fill in the color. 
+</p>
+<p>For Blinn-Phong shading, we stack up three types of shadings: Specular, Diffuse, and Ambient. Specular shading is mostly the reflection of the surface,
+  its intensity depends on the viewing direction. Diffuse shading depends on the view direction and the Ambient shading does not depend on anything. It adds
+  color to the overall illumination. By adding the three shadings up, we get Blinn-Phong shading. 
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/5-1.png" align="top" width="480px" border = "1px solid green"/>
+        <figcaption align="middle">Ambient shading only</figcaption>
+      </td>
+      <td>
+        <img src="images/5-2.png" align="top" width="450px" border = "1px solid green"/>
+        <figcaption align="middle">Specular shading only</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/5-3.png" align="top" width="450px" border = "1px solid green"/>
+      <figcaption align="middle">Diffuse shading only</figcaption>
+    </td>
+    <td>
+      <img src="images/5-4.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">Blinn-Phong Shading</figcaption>
+    </td>
+</tr>
+</table>
+<p>For texture mapping, we simply use texture(sampler2D tex, vec2 uv) to apply the texture at given u-v coordinate,
+  I downloaded the texture of wood from Internet and apply it to the cloth rendering.
+</p>
+<div align="center">
+  <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/5-5.png" align="top" width="500px" border = "1px solid green"/>
+            <figcaption align="middle">Texture Mapping</figcaption>
+          </td>
+        </tr>
+  </table>
+</div>
+<p>Below is a comparison between Bump Mapping and Displacement Mapping. For both mapping, we calcualte the 
+  tangent-bitangent-normal (TBN) matrix and apply it to the local space normal to get our normal and pass it
+  as a variable for Blinn-Phong shading.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/5-6.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">Bump Mapping: N = 100, Height = 0.01</figcaption>
+      </td>
+      <td>
+        <img src="images/5-7.png" align="top" width="480px" border = "1px solid green"/>
+        <figcaption align="middle">Displacement Mapping: N = 100, Height = 0.01</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/5-14.png" align="top" width="500px" border = "1px solid green"/>
+      <figcaption align="middle">Bump Mapping: N = 100, Height = 0.01</figcaption>
+    </td>
+    <td>
+      <img src="images/5-15.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">Displacement Mapping: N = 100, Height = 0.01</figcaption>
+    </td>
+</tr>
+  <tr>
+    <td>
+      <img src="images/5-8.png" align="top" width="500px" border = "1px solid green"/>
+      <figcaption align="middle">Bump Mapping: N = 100, Height = 0.1</figcaption>
+    </td>
+    <td>
+      <img src="images/5-9.png" align="top" width="440px" border = "1px solid green"/>
+      <figcaption align="middle">Displacement Mapping: N = 100, Height = 0.1</figcaption>
+    </td>
+</tr>
+<tr>
+  <td>
+    <img src="images/5-16.png" align="top" width="500px" border = "1px solid green"/>
+    <figcaption align="middle">Bump Mapping: N = 100, Height = 0.01</figcaption>
+  </td>
+  <td>
+    <img src="images/5-17.png" align="top" width="460px" border = "1px solid green"/>
+    <figcaption align="middle">Displacement Mapping: N = 100, Height = 0.01</figcaption>
+  </td>
+</tr>
+</table>
+<p>We can see that with low value of height, both bump mapping and displacement mapping looks similar. 
+  However, if we increase the height, the wrinkles of the cloth with displacement mapping becomes unrealistic
+  since the vertices of the cloth are transformed. In my opinion, the bump mapping seems more realistic.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/5-10.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">Bump Mapping: coarseness = 16</figcaption>
+      </td>
+      <td>
+        <img src="images/5-11.png" align="top" width="480px" border = "1px solid green"/>
+        <figcaption align="middle">Displacement Mapping: coarseness = 16</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <tr>
+      <td>
+        <img src="images/5-24.png" align="top" width="480px" border = "1px solid green"/>
+        <figcaption align="middle">Bump Mapping: coarseness = 16</figcaption>
+      </td>
+      <td>
+        <img src="images/5-22.png" align="top" width="470px" border = "1px solid green"/>
+        <figcaption align="middle">Displacement Mapping: coarseness = 16</figcaption>
+      </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="images/5-13.png" align="top" width="480px" border = "1px solid green"/>
+      <figcaption align="middle">Bump Mapping: coarseness = 128</figcaption>
+    </td>
+    <td>
+      <img src="images/5-12.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">Displacement Mapping: coarseness = 128</figcaption>
+    </td>
+</tr>
+<tr>
+  <tr>
+    <td>
+      <img src="images/5-25.png" align="top" width="460px" border = "1px solid green"/>
+      <figcaption align="middle">Bump Mapping: coarseness = 128</figcaption>
+    </td>
+    <td>
+      <img src="images/5-23.png" align="top" width="470px" border = "1px solid green"/>
+      <figcaption align="middle">Displacement Mapping: coarseness = 128</figcaption>
+    </td>
+</tr>
+<tr>
+</table>
+<p>
+  With low coarseness, the difference between the bump and the displacement is little. 
+  There are some sharp bumps within the displacement mapping.
+  At high coarseness,the bump map is a better shading program as the displacement shading creates more sharp
+  edges which results in inaccuracy.
+</p>
+<table style="width=100%">
+  <tr>
+      <td>
+        <img src="images/5-26.png" align="top" width="500px" border = "1px solid green"/>
+        <figcaption align="middle">Environment-mapped Reflections</figcaption>
+      </td>
+      <td>
+        <img src="images/5-27.png" align="top" width="450px" border = "1px solid green"/>
+        <figcaption align="middle">Environment-mapped Reflections</figcaption>
+      </td>
+    </tr>
+</table>
+<p>The last shading we do is Environment-mapped Reflections. We implement by using the formula of reflection from the 
+  last project and calcuate w_in and w_out and applies to texture map accordingly. </p>
+</body>
 </html>
